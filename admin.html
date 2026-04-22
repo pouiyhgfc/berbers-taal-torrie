@@ -307,29 +307,47 @@ function switchTab(t) { state.tab = t; render(); if (t==='participants') loadPar
 function setParticipantFilter(v) { state.participantFilter = v; render(); }
 
 // ── CSV export: Woord | Antwoord | Tag ─────────────────────────────────────
-function exportCsv() {
-  if (state.responses.length === 0) { toast('Geen rijen om te exporteren','err'); return; }
-  const rows = [['Woord','Antwoord','Tag']];
-  // Alleen beantwoord (niet 'open') en alleen meest recente antwoord per
-  // (participant, woord, niveau) — anders zie je intrekkingen dubbel.
-  const latest = {};
-  // Supabase levert al DESC op created_at, dus eerste hit = laatste antwoord.
-  state.responses.forEach(r => {
-    const key = `${r.participant_id}|${r.niveau}|${r.word_idx}`;
-    if (!latest[key]) latest[key] = r;
-  });
-  Object.values(latest).forEach(r => {
-    if (r.status === 'open') return;
-    rows.push([r.nederlands, r.waarde || r.primair || '', r.niveau]);
-  });
-  const esc = v => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
-  const csv = rows.map(row => row.map(esc).join(',')).join('\n');
-  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'berbers_export_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
-  toast(`CSV geëxporteerd (${rows.length-1} regels)`);
+// Sinds record_response een UPSERT is, is er per (deelnemer, woord) precies
+// één rij in de database. De export:
+//   - haalt álle rijen op die matchen met de huidige filters (niet alleen
+//     de zichtbare 50 van deze pagina),
+//   - filtert status='open' eruit (nog niet definitief),
+//   - filtert rijen zonder waarde/primair eruit (veiligheid).
+async function exportCsv() {
+  try {
+    let q = sb.from('responses').select('niveau, nederlands, primair, status, waarde').order('niveau').order('word_idx');
+    const f = state.filters;
+    if (f.niveau) q = q.eq('niveau', f.niveau);
+    if (f.status) q = q.eq('status', f.status);
+    if (f.participant) q = q.eq('participant_id', f.participant);
+    if (f.from) q = q.gte('created_at', f.from);
+    if (f.to) q = q.lte('created_at', f.to + 'T23:59:59');
+    const safe = sanitizeSearch(f.search);
+    if (safe) q = q.or(`nederlands.ilike.%${safe}%,waarde.ilike.%${safe}%,primair.ilike.%${safe}%,thema.ilike.%${safe}%`);
+    // Expliciete hoge limiet — Supabase default is 1000.
+    q = q.range(0, 49999);
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = [['Woord','Antwoord','Tag']];
+    (data || []).forEach(r => {
+      if (r.status === 'open') return;
+      const antwoord = r.status === 'primair' ? (r.primair || '') : (r.waarde || '');
+      if (!antwoord) return;
+      rows.push([r.nederlands, antwoord, r.niveau]);
+    });
+    if (rows.length === 1) { toast('Geen definitieve antwoorden om te exporteren','err'); return; }
+    const esc = v => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
+    const csv = rows.map(row => row.map(esc).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'berbers_export_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    toast(`CSV geëxporteerd (${rows.length-1} regels)`);
+  } catch(err) {
+    console.error('exportCsv', err);
+    toast('Export mislukt: '+(err.message||'fout'), 'err');
+  }
 }
 
 // ── Delete flows ───────────────────────────────────────────────────────────

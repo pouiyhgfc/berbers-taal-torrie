@@ -29,8 +29,13 @@ create table if not exists public.responses (
   status text not null check (status in ('primair','alternatief','eigen','open')),
   waarde text,
   is_edit boolean default false,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+-- Eén rij per (deelnemer, niveau, woord) — edits zijn upserts, niet nieuwe rijen.
+create unique index if not exists responses_unique_participant_word
+  on public.responses(participant_id, niveau, word_idx);
 
 create index if not exists responses_participant_idx on public.responses(participant_id);
 create index if not exists responses_niveau_idx on public.responses(niveau);
@@ -118,7 +123,9 @@ begin
 end; $$;
 grant execute on function public.record_participant(uuid, uuid, text, text, text) to anon, authenticated;
 
--- record_response: valideert en insert
+-- record_response: upsert op (participant_id, niveau, word_idx). Bij edit wordt
+-- de bestaande rij bijgewerkt (is_edit = true, updated_at = now()). Zo is er
+-- altijd precies één rij per (deelnemer, woord) — geen dubbele CSV-regels meer.
 create or replace function public.record_response(
   p_participant_id uuid, p_session_id uuid, p_niveau text, p_word_idx integer,
   p_nederlands text, p_primair text, p_thema text, p_status text,
@@ -135,10 +142,60 @@ begin
   if p_waarde is not null and length(p_waarde) > 500 then raise exception 'invalid waarde'; end if;
   if p_word_idx is null or p_word_idx < 0 or p_word_idx >= 5000 then raise exception 'invalid word_idx'; end if;
 
-  insert into public.responses (participant_id, session_id, niveau, word_idx, nederlands, primair, thema, status, waarde, is_edit)
-  values (p_participant_id, p_session_id, p_niveau, p_word_idx, p_nederlands, p_primair, p_thema, p_status, p_waarde, coalesce(p_is_edit, false));
+  insert into public.responses (participant_id, session_id, niveau, word_idx, nederlands, primair, thema, status, waarde, is_edit, updated_at)
+  values (p_participant_id, p_session_id, p_niveau, p_word_idx, p_nederlands, p_primair, p_thema, p_status, p_waarde, coalesce(p_is_edit, false), now())
+  on conflict (participant_id, niveau, word_idx) do update
+    set session_id = excluded.session_id,
+        nederlands = excluded.nederlands,
+        primair = excluded.primair,
+        thema = excluded.thema,
+        status = excluded.status,
+        waarde = excluded.waarde,
+        is_edit = true,
+        updated_at = now();
 end; $$;
 grant execute on function public.record_response(uuid, uuid, text, integer, text, text, text, text, text, boolean) to anon, authenticated;
+
+-- withdraw_response: verwijder een antwoord (gebruikt bij "Terug in de lijst").
+-- Anon mag dit alleen voor z'n eigen participant_id + session_id combo.
+create or replace function public.withdraw_response(
+  p_participant_id uuid, p_session_id uuid, p_niveau text, p_word_idx integer
+) returns void language plpgsql security definer set search_path = 'public' as $$
+begin
+  if p_participant_id is null or p_session_id is null then raise exception 'missing id'; end if;
+  if not exists (
+    select 1 from public.participants where id = p_participant_id and session_id = p_session_id
+  ) then
+    raise exception 'invalid credentials';
+  end if;
+  delete from public.responses
+  where participant_id = p_participant_id
+    and niveau = p_niveau
+    and word_idx = p_word_idx;
+end; $$;
+grant execute on function public.withdraw_response(uuid, uuid, text, integer) to anon, authenticated;
+
+-- get_my_responses: deelnemer haalt z'n eigen antwoorden op (voor sync bij opstart,
+-- zodat admin-wijzigingen zichtbaar worden voor de user). Vereist kennis van
+-- zowel id als session_id (beide lokaal in localStorage).
+create or replace function public.get_my_responses(
+  p_id uuid, p_session_id uuid
+) returns table (
+  niveau text, word_idx integer, status text, waarde text, is_edit boolean, updated_at timestamptz
+) language plpgsql security definer set search_path = 'public' as $$
+begin
+  if p_id is null or p_session_id is null then raise exception 'missing id'; end if;
+  if not exists (
+    select 1 from public.participants where id = p_id and session_id = p_session_id
+  ) then
+    raise exception 'invalid credentials';
+  end if;
+  return query
+    select r.niveau, r.word_idx, r.status, r.waarde, r.is_edit, r.updated_at
+    from public.responses r
+    where r.participant_id = p_id;
+end; $$;
+grant execute on function public.get_my_responses(uuid, uuid) to anon, authenticated;
 
 -- mark_participant_done: zet completed_at op now()
 create or replace function public.mark_participant_done(p_id uuid)

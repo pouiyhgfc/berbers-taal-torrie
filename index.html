@@ -336,6 +336,45 @@ async function ensureParticipantRegistered() {
   return true;
 }
 
+// Sync lokale beslissingen met de database. De DB is leidend: als de admin
+// antwoorden heeft verwijderd of bewerkt, zie je dat hier terug. Items die nog
+// in de pending-wachtrij staan (nog niet verstuurd) worden níet overschreven.
+async function syncFromDb() {
+  if (!sb || !state.participant) return;
+  const { data, error } = await sb.rpc('get_my_responses', {
+    p_id: state.participant.id,
+    p_session_id: state.participant.session_id,
+  });
+  if (error) { recordError(error, 'syncFromDb'); return; }
+
+  // Bouw fresh allDecisions vanuit DB, behoud idx (review-positie) per niveau
+  const fresh = {};
+  NIVEAUS.forEach(n => { fresh[n] = { decisions: {}, idx: state.allDecisions[n]?.idx || 0 }; });
+  (data || []).forEach(r => {
+    if (!fresh[r.niveau]) return;
+    fresh[r.niveau].decisions[r.word_idx] = { status: r.status, waarde: r.waarde || '' };
+  });
+  // Pending queue heeft voorrang (lokaal nog niet verstuurd maar wel al door user gedaan)
+  (state.pendingQueue || []).forEach(p => {
+    if (!fresh[p.niveau]) return;
+    fresh[p.niveau].decisions[p.word_idx] = { status: p.status, waarde: p.waarde || '' };
+  });
+  state.allDecisions = fresh;
+  NIVEAUS.forEach(n => lsSave(n));
+}
+
+// Trek een antwoord terug via de DB (gebruikt bij "Terug in de lijst").
+async function withdrawResponse(niveau, wordIdx) {
+  if (!sb || !state.participant) return;
+  const { error } = await sb.rpc('withdraw_response', {
+    p_participant_id: state.participant.id,
+    p_session_id: state.participant.session_id,
+    p_niveau: niveau,
+    p_word_idx: wordIdx,
+  });
+  if (error) throw error;
+}
+
 async function callRecordResponse(payload) {
   const { error } = await sb.rpc('record_response', {
     p_participant_id: payload.participant_id,
@@ -487,7 +526,7 @@ function showDiagnose() {
         ${err ? `<div class="diag-row" style="flex-direction:column;align-items:flex-start"><span>Laatste fout</span><b style="color:#ef4444;word-break:break-word">${h(err.message)}</b>${err.code?`<span style="font-size:10px;color:#666">code: ${h(err.code)}</span>`:''}</div>` : ''}
       </div>
       <div class="btn-row" style="display:flex;gap:8px;margin-bottom:8px">
-        <button class="btn-primair" style="background:#6366f120;color:#6366f1;border-color:#6366f150;margin:0;flex:1" onclick="flushQueue().then(()=>{toast('Opnieuw geprobeerd');updateSyncBadge();document.getElementById('diagOverlay')?.remove();})">↻ Opnieuw proberen</button>
+        <button class="btn-primair" style="background:#6366f120;color:#6366f1;border-color:#6366f150;margin:0;flex:1" onclick="manualSync().then(()=>{document.getElementById('diagOverlay')?.remove();render();})">↻ Sync met server</button>
         <button class="btn-later" style="flex:1;margin:0" onclick="copyDebug()">⧉ Kopieer debug</button>
       </div>
       <details style="background:#0d0d14;border-radius:12px;padding:10px;border:1px solid #ffffff15">
@@ -1141,10 +1180,9 @@ function saveEdit(status, waarde) {
   const newDecisions = {...(ns?.decisions||{})};
   let newIdx = ns?.idx ?? 0;
   if (status === null) {
-    // "Terug in de lijst" — lokaal verwijderen, in DB markeren als 'open' met
-    // is_edit=true zodat de admin ziet dat de deelnemer z'n keuze introk.
-    // Ook de review-pointer terugzetten naar (op z'n hoogst) dit woord, zodat
-    // bij "Doorgaan" vanaf home dit woord meteen weer in beeld komt.
+    // "Terug in de lijst" — lokaal verwijderen én in de DB verwijderen via
+    // withdraw_response. Ook de review-pointer terugzetten naar dit woord
+    // zodat het bij "Doorgaan" opnieuw langskomt.
     delete newDecisions[idx];
     newIdx = Math.min(newIdx, idx);
     toast('Terug in de lijst — verschijnt weer bij "Doorgaan"');
@@ -1155,18 +1193,26 @@ function saveEdit(status, waarde) {
   lsSave(niveau);
   if (state.participant) {
     const word = DATA[niveau].w[idx];
-    pushResponse({
-      participant_id: state.participant.id,
-      session_id: state.participant.session_id,
-      niveau,
-      word_idx: idx,
-      nederlands: word.n,
-      primair: word.p,
-      thema: word.t,
-      status: status || 'open',
-      waarde: status ? (waarde || null) : null,
-      is_edit: true,
-    }).then(persistQueue);
+    if (status === null) {
+      // Echt verwijderen uit DB (geen 'open'-rij laten staan).
+      withdrawResponse(niveau, idx).catch(err => {
+        recordError(err, 'withdrawResponse');
+        toast('Kon niet verwijderen uit database: '+(err.message||'fout'), 'err');
+      });
+    } else {
+      pushResponse({
+        participant_id: state.participant.id,
+        session_id: state.participant.session_id,
+        niveau,
+        word_idx: idx,
+        nederlands: word.n,
+        primair: word.p,
+        thema: word.t,
+        status,
+        waarde: waarde || null,
+        is_edit: true,
+      }).then(persistQueue);
+    }
   }
   renderResults();
 }
@@ -1190,15 +1236,31 @@ render();
 updateSyncBadge(); // toont evt. config-banner meteen
 
 // Asynchroon wachten tot supabase-js (van CDN) geladen is, dan init afronden:
-// registreer (of her-registreer) de deelnemer en flush de wachtrij.
+// registreer (of her-registreer) de deelnemer, flush de wachtrij, en sync
+// vanuit de DB zodat admin-wijzigingen zichtbaar worden.
 initSupabaseWithRetry().then(() => {
   updateSyncBadge();
   if (!sb) return;
   const job = state.participant
-    ? ensureParticipantRegistered().then(() => flushQueue())
+    ? ensureParticipantRegistered()
+        .then(() => flushQueue())
+        .then(() => syncFromDb())
+        .then(() => render())
     : (state.pendingQueue.length ? flushQueue() : Promise.resolve());
   job.catch(err => recordError(err, 'initEnsure'));
 });
+
+// Handmatige sync-knop voor de user (gebruikt het diagnose-paneel).
+async function manualSync() {
+  if (!sb) { toast('Geen verbinding met database','err'); return; }
+  try {
+    await ensureParticipantRegistered();
+    await flushQueue();
+    await syncFromDb();
+    render();
+    toast('Gesynchroniseerd');
+  } catch(e) { recordError(e, 'manualSync'); toast('Sync mislukt: '+(e.message||'fout'), 'err'); }
+}
 
 setInterval(()=>{ if (sb) flushQueue(); else tryInitSupabase(); updateSyncBadge(); }, 15000);
 window.addEventListener('online', ()=>{ if (sb) flushQueue(); else initSupabaseWithRetry().then(updateSyncBadge); });

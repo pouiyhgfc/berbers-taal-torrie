@@ -113,11 +113,18 @@ Doorloop deze checklist:
 
 Elke antwoordkeuze wordt:
 1. direct in `localStorage` bewaard (volgorde per niveau + keuze),
-2. naar Supabase gestuurd via de RPC `record_response`,
+2. naar Supabase gestuurd via de RPC `record_response` (**upsert** — per
+   `(deelnemer, niveau, woord_idx)` bestaat er altijd precies één rij in de
+   database, dus edits vervangen de bestaande rij i.p.v. een nieuwe aan te maken),
 3. bij falen in een wachtrij in `localStorage` gezet. De wachtrij wordt elke 15 s en
    bij terug-online opnieuw geprobeerd; daarbij wordt ook `record_participant`
    opnieuw aangeroepen (idempotent, zodat een "unknown participant"-fout direct
    hersteld wordt).
+
+Bij opstart draait de app ook `get_my_responses` om de **DB als bron van waarheid**
+te gebruiken: als de admin antwoorden heeft verwijderd of bewerkt, ziet de user
+die wijzigingen na een refresh terug. "Terug in de lijst" (edit-modal) gebruikt
+`withdraw_response` om het antwoord echt uit de DB te halen — niet alleen lokaal.
 
 Bij het indrukken van **"Klaar — verstuur en rond af"** wordt de wachtrij volledig
 geflushed en de deelnemer krijgt `completed_at` in de database (via
