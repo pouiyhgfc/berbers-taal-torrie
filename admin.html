@@ -306,10 +306,10 @@ function changePage(d) {
 function switchTab(t) { state.tab = t; render(); if (t==='participants') loadParticipants().then(render); }
 function setParticipantFilter(v) { state.participantFilter = v; render(); }
 
-// ── CSV export: Niveau | Woord | Antwoord ──────────────────────────────────
+// ── CSV export: Woord | Antwoord | Tag ─────────────────────────────────────
 function exportCsv() {
   if (state.responses.length === 0) { toast('Geen rijen om te exporteren','err'); return; }
-  const rows = [['Niveau','Woord','Antwoord']];
+  const rows = [['Woord','Antwoord','Tag']];
   // Alleen beantwoord (niet 'open') en alleen meest recente antwoord per
   // (participant, woord, niveau) — anders zie je intrekkingen dubbel.
   const latest = {};
@@ -320,7 +320,7 @@ function exportCsv() {
   });
   Object.values(latest).forEach(r => {
     if (r.status === 'open') return;
-    rows.push([r.niveau, r.nederlands, r.waarde || r.primair || '']);
+    rows.push([r.nederlands, r.waarde || r.primair || '', r.niveau]);
   });
   const esc = v => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
   const csv = rows.map(row => row.map(esc).join(',')).join('\n');
@@ -454,7 +454,7 @@ function renderActionRow() {
   return `
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap">
       <button class="btn" onclick="loadAll().then(render)">↻ Vernieuwen</button>
-      <button class="btn btn-success" onclick="exportCsv()">⬇ Exporteer CSV (Niveau · Woord · Antwoord)</button>
+      <button class="btn btn-success" onclick="exportCsv()">⬇ Exporteer CSV (Woord · Antwoord · Tag)</button>
     </div>`;
 }
 

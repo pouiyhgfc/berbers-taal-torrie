@@ -142,8 +142,9 @@ Per deelnemer komt één rij in `participants`:
 - Alle antwoorden zien (paginated, 50 per pagina).
 - **Zoeken** (live, met debounce) in Nederlands / eigen vertaling / primair / thema.
 - Filteren op **niveau**, **status**, **deelnemer** en **datumrange**.
-- **CSV export** met 3 kolommen (Niveau · Woord · Antwoord). Bij gewijzigde antwoorden
-  wordt automatisch alleen het meest recente antwoord per woord geëxporteerd.
+- **CSV export** met 3 kolommen (Woord · Antwoord · Tag), waarbij de tag het
+  niveau is. Bij gewijzigde antwoorden wordt automatisch alleen het meest
+  recente antwoord per woord geëxporteerd.
 - Tabblad **Deelnemers** met status (`klaar` / `bezig`), voortgang-% en totaal aantal
   antwoorden per persoon.
 - **Verwijderen** per antwoord of per deelnemer (cascade) met bevestigingsdialoog,
