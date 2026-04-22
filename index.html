@@ -814,31 +814,55 @@ async function submitFinish() {
   toast('Alles opgeslagen — bedankt!');
 }
 
+// Zoek het eerstvolgende woord zónder beslissing, vanaf startIdx vooruit. Als
+// er verderop niks is (bv. de gebruiker zette een woord eerder terug in de lijst),
+// wrappen we terug naar het begin. Geeft -1 als alles beslist is.
+function findNextUndecided(niveau, startIdx) {
+  const words = DATA[niveau].w;
+  const decs = state.allDecisions[niveau]?.decisions || {};
+  const n = words.length;
+  for (let i = Math.max(0, startIdx); i < n; i++) if (!decs[i]) return i;
+  for (let i = 0; i < Math.max(0, startIdx); i++) if (!decs[i]) return i;
+  return -1;
+}
+
 // ── Render Review ──────────────────────────────────────────────────────────
 function renderReview() {
   const niveau = state.activeNiveau;
   const words = DATA[niveau].w;
   const ns = state.allDecisions[niveau];
   const decisions = ns?.decisions||{};
-  const idx = ns?.idx||0;
+  let idx = ns?.idx||0;
   const c = NC[NIVEAUS.indexOf(niveau)];
 
-  if (idx >= words.length) {
-    const open = Object.values(decisions).filter(d=>d?.status==='open').length;
-    document.getElementById('app').innerHTML = `
-    <div class="done-screen">
-      <div class="done-icon">✓</div>
-      <div class="done-title">${h(niveau)} klaar</div>
-      <div class="done-sub">${open>0?open+' woorden staan nog open':'Alle woorden beoordeeld'}</div>
-      <button class="btn-done-back" style="background:${c}20;color:${c};border-color:${c}50" onclick="goHome()">← Terug naar niveaus</button>
-    </div>`;
-    return;
+  // Als het huidige of voorbije idx al beslist is (kan na "Terug in de lijst",
+  // na "Later" of wanneer idx voorbij het eind staat), zoek het eerstvolgende
+  // onbesliste woord. Zo wordt een teruggezet woord automatisch weer getoond.
+  if (idx >= words.length || decisions[idx]) {
+    const next = findNextUndecided(niveau, idx >= words.length ? 0 : idx);
+    if (next === -1) {
+      const open = Object.values(decisions).filter(d=>d?.status==='open').length;
+      document.getElementById('app').innerHTML = `
+      <div class="done-screen">
+        <div class="done-icon">✓</div>
+        <div class="done-title">${h(niveau)} klaar</div>
+        <div class="done-sub">${open>0?open+' woorden staan nog open':'Alle woorden beoordeeld'}</div>
+        <button class="btn-done-back" style="background:${c}20;color:${c};border-color:${c}50" onclick="goHome()">← Terug naar niveaus</button>
+      </div>`;
+      return;
+    }
+    idx = next;
+    state.allDecisions[niveau].idx = idx;
+    lsSave(niveau);
   }
 
   const word = words[idx];
   const tc = TC[word.t]||'#64748b';
   const openCount = Object.values(decisions).filter(d=>d?.status==='open').length;
-  const pct = (idx/words.length*100).toFixed(1);
+  const decidedCount = Object.keys(decisions).length;
+  // Voortgang = aantal woorden met een beslissing / totaal. Bij "Terug in lijst"
+  // daalt deze correct (ipv de lineaire idx-teller die voorheen gebruikt werd).
+  const pct = (decidedCount/words.length*100).toFixed(1);
 
   const altsHtml = word.a.length>0 ? `
     <div class="alts-section">
@@ -875,7 +899,7 @@ function renderReview() {
         <div class="review-meta">
           <span id="flashMsg" class="review-flash" style="display:none">✓</span>
           ${openCount>0?`<span class="review-open-badge">${openCount} open</span>`:''}
-          <span class="review-counter">${idx+1}/${words.length}</span>
+          <span class="review-counter">${decidedCount}/${words.length}</span>
         </div>
       </div>
       <div class="progress-bar-wrap">
@@ -1115,14 +1139,19 @@ function saveEdit(status, waarde) {
   const idx = state.editingWordIdx;
   const ns = state.allDecisions[niveau];
   const newDecisions = {...(ns?.decisions||{})};
+  let newIdx = ns?.idx ?? 0;
   if (status === null) {
     // "Terug in de lijst" — lokaal verwijderen, in DB markeren als 'open' met
     // is_edit=true zodat de admin ziet dat de deelnemer z'n keuze introk.
+    // Ook de review-pointer terugzetten naar (op z'n hoogst) dit woord, zodat
+    // bij "Doorgaan" vanaf home dit woord meteen weer in beeld komt.
     delete newDecisions[idx];
+    newIdx = Math.min(newIdx, idx);
+    toast('Terug in de lijst — verschijnt weer bij "Doorgaan"');
   } else {
     newDecisions[idx] = {status, waarde};
   }
-  state.allDecisions[niveau] = {...ns, decisions: newDecisions};
+  state.allDecisions[niveau] = {...ns, decisions: newDecisions, idx: newIdx};
   lsSave(niveau);
   if (state.participant) {
     const word = DATA[niveau].w[idx];
