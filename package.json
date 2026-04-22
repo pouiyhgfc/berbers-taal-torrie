@@ -1,0 +1,7 @@
+{
+  "name": "berbers-review-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Online versie van Berbers Review met Supabase backend",
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Berbers Review — Diagnose</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{background:#0a0a0f;color:#eee;min-height:100vh;padding:30px 20px}
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:4px}
+  .sub{color:#777;font-size:13px;margin-bottom:22px}
+  .check{background:#111118;border:1px solid #ffffff12;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px}
+  .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0}
+  .dot.ok{background:#4ade80}
+  .dot.fail{background:#ef4444}
+  .dot.pending{background:#f59e0b;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .check-body{flex:1;min-width:0}
+  .check-title{font-weight:600;font-size:14px;margin-bottom:2px}
+  .check-msg{font-size:12px;color:#888;word-break:break-word}
+  .check-msg.err{color:#fca5a5}
+  pre{background:#0d0d14;border:1px solid #ffffff12;border-radius:10px;padding:12px;font-size:11px;color:#aaa;overflow:auto;margin-top:14px;white-space:pre-wrap;word-break:break-word}
+  button{background:#6366f1;border:none;border-radius:10px;color:#fff;padding:10px 18px;font-size:13px;cursor:pointer;margin-right:8px;margin-top:10px}
+  button:disabled{opacity:.5}
+  a{color:#8b9cf8}
+  .back{display:inline-block;color:#6366f1;text-decoration:none;font-size:13px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← terug naar app</a>
+  <h1>Diagnose</h1>
+  <div class="sub">Deze pagina doet een reeks checks om te zien of het opslaan werkt. Veilig te delen (er wordt geen data van andere deelnemers opgevraagd).</div>
+
+  <div id="checks"></div>
+  <button id="runBtn" onclick="runChecks()">↻ Opnieuw uitvoeren</button>
+  <button onclick="location.href='index.html'">Ga terug naar app</button>
+
+  <pre id="log">Laden...</pre>
+</div>
+
+<script src="config.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+        onerror="(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';s.onerror=function(){document.getElementById('log').textContent+='\nsupabase-js kon van geen enkele CDN geladen worden — test in een echte browser via http://localhost:3000';};document.head.appendChild(s);})()"></script>
+<script>
+const CFG = window.APP_CONFIG || {};
+const log = (...args) => {
+  const el = document.getElementById('log');
+  const line = args.map(a => typeof a==='string' ? a : JSON.stringify(a, null, 2)).join(' ');
+  el.textContent += '\n' + line;
+  el.scrollTop = el.scrollHeight;
+};
+
+const checks = [
+  { id: 'cfg',   title: '1. Config geladen (config.js → APP_CONFIG)' },
+  { id: 'lib',   title: '2. Supabase-library geladen' },
+  { id: 'client',title: '3. Supabase client gemaakt' },
+  { id: 'write', title: '4. Schrijftest: record_participant + record_response' },
+  { id: 'done',  title: '5. Voltooiing-test: mark_participant_done' },
+];
+
+function renderChecks(states) {
+  const el = document.getElementById('checks');
+  el.innerHTML = checks.map(c => {
+    const s = states[c.id] || { status: 'pending', msg: 'wachten...' };
+    return `<div class="check">
+      <div class="dot ${s.status}"></div>
+      <div class="check-body">
+        <div class="check-title">${c.title}</div>
+        <div class="check-msg ${s.status==='fail'?'err':''}">${s.msg || ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function uuidv4() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  const b = new Uint8Array(16); crypto.getRandomValues(b);
+  b[6] = (b[6]&0x0f)|0x40; b[8] = (b[8]&0x3f)|0x80;
+  const x = [...b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  return `${x.slice(0,8)}-${x.slice(8,12)}-${x.slice(12,16)}-${x.slice(16,20)}-${x.slice(20)}`;
+}
+
+async function waitForSupabase(timeoutMs = 5000) {
+  const start = Date.now();
+  while (!window.supabase && Date.now() - start < timeoutMs) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return !!window.supabase;
+}
+
+async function runChecks() {
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('log').textContent = 'Start diagnose...';
+  const states = {};
+  renderChecks(states);
+
+  // 1. Config
+  if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY) {
+    states.cfg = { status: 'ok', msg: 'URL: ' + CFG.SUPABASE_URL };
+  } else {
+    states.cfg = { status: 'fail', msg: 'SUPABASE_URL of SUPABASE_ANON_KEY ontbreekt in config.js. Zie README stap 4.' };
+  }
+  log('[cfg]', states.cfg);
+  renderChecks(states);
+  if (states.cfg.status !== 'ok') { document.getElementById('runBtn').disabled=false; return; }
+
+  // 2. Library (wacht maximaal 5s op CDN-load + fallback)
+  states.lib = { status: 'pending', msg: 'wachten op CDN...' }; renderChecks(states);
+  const libOk = await waitForSupabase(5000);
+  if (libOk) {
+    states.lib = { status: 'ok', msg: 'supabase-js beschikbaar' };
+  } else {
+    states.lib = { status: 'fail', msg: 'Kon supabase-js niet laden vanaf unpkg.com of jsDelivr. Oorzaken: ad-blocker, offline, of je kijkt via een ingebouwde IDE-preview (test in Chrome/Firefox via http://localhost:3000).' };
+  }
+  log('[lib]', states.lib);
+  renderChecks(states);
+  if (states.lib.status !== 'ok') { document.getElementById('runBtn').disabled=false; return; }
+
+  // 3. Client
+  let sb = null;
+  try {
+    sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+    states.client = { status: 'ok', msg: 'client ok' };
+  } catch (e) {
+    states.client = { status: 'fail', msg: e.message };
+  }
+  log('[client]', states.client);
+  renderChecks(states);
+  if (!sb) { document.getElementById('runBtn').disabled=false; return; }
+
+  // 4. Write-test
+  const testId = uuidv4();
+  const testSession = uuidv4();
+  try {
+    const r1 = await sb.rpc('record_participant', {
+      p_id: testId, p_session_id: testSession,
+      p_name: '__diagnose__', p_email: null, p_user_agent: navigator.userAgent
+    });
+    if (r1.error) throw r1.error;
+    const r2 = await sb.rpc('record_response', {
+      p_participant_id: testId, p_session_id: testSession,
+      p_niveau: 'Niveau 1', p_word_idx: 0, p_nederlands: '__diag__',
+      p_primair: null, p_thema: null, p_status: 'open', p_waarde: null, p_is_edit: false
+    });
+    if (r2.error) throw r2.error;
+    states.write = { status: 'ok', msg: 'Zowel participant als response werden succesvol weggeschreven.' };
+  } catch (e) {
+    states.write = { status: 'fail', msg: (e?.message||String(e)) + (e?.hint?(' — hint: '+e.hint):'') };
+  }
+  log('[write]', states.write);
+  renderChecks(states);
+
+  // 5. mark_participant_done
+  try {
+    const r = await sb.rpc('mark_participant_done', { p_id: testId });
+    if (r.error) throw r.error;
+    states.done = { status: 'ok', msg: 'RPC mark_participant_done werkt.' };
+  } catch (e) {
+    states.done = { status: 'fail', msg: (e?.message||String(e)) + ' (niet fataal — test-deelnemer moet nog wel handmatig verwijderd worden indien nodig)' };
+  }
+  log('[done]', states.done);
+  renderChecks(states);
+
+  log('\nKlaar. Let op: test-data staat nu in de database met naam "__diagnose__". Die kan je als admin wissen via het dashboard of SQL editor.');
+  document.getElementById('runBtn').disabled = false;
+}
+
+renderChecks({});
+runChecks();
+</script>
+</body>
+</html>

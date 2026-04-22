@@ -1,0 +1,8 @@
+node_modules/
+.vercel/
+# Alleen de config op root negeren (bevat lokale Supabase-keys).
+# api/config.js is een Vercel serverless function en moet WEL gecommit worden.
+/config.js
+.env
+.env.local
+.DS_Store

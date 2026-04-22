@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Berbers Review — Admin</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0a0f;color:#eee;min-height:100vh}
+  .topbar{background:#111118;border-bottom:1px solid #ffffff10;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  .topbar h1{font-size:18px;font-weight:600}
+  .topbar .sub{font-size:11px;color:#666;letter-spacing:2px;text-transform:uppercase}
+  .topbar button{background:#ffffff08;border:1px solid #ffffff18;color:#aaa;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer}
+  .topbar button:hover{background:#ffffff12}
+  .container{padding:20px 22px;max-width:1400px;margin:0 auto}
+  .login-card{max-width:380px;margin:80px auto;background:#111118;border:1px solid #ffffff12;border-radius:16px;padding:30px}
+  .login-card h2{margin-bottom:6px;font-size:22px}
+  .login-card p{color:#777;font-size:13px;margin-bottom:20px}
+  .login-card label{display:block;font-size:11px;color:#777;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;margin-top:12px}
+  .login-card input{width:100%;background:#0a0a0f;border:1px solid #ffffff18;border-radius:10px;padding:12px;color:#fff;font-size:14px;outline:none}
+  .login-card input:focus{border-color:#6366f1}
+  .login-card button{width:100%;background:#6366f1;border:none;border-radius:10px;padding:13px;color:#fff;font-weight:600;margin-top:16px;cursor:pointer}
+  .login-card button:disabled{opacity:0.5}
+  .login-card .err{color:#ef4444;font-size:12px;margin-top:10px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .stat{background:#111118;border:1px solid #ffffff10;border-radius:12px;padding:16px}
+  .stat .v{font-size:26px;font-weight:700;line-height:1}
+  .stat .l{font-size:10px;color:#666;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px}
+  .filters{background:#111118;border:1px solid #ffffff10;border-radius:12px;padding:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .filters select,.filters input{background:#0a0a0f;border:1px solid #ffffff18;color:#ddd;border-radius:8px;padding:7px 10px;font-size:13px;outline:none}
+  .filters label{font-size:11px;color:#666;letter-spacing:1px;text-transform:uppercase}
+  .filters .grow{flex:1;min-width:160px}
+  .export-btn{background:#4ade8018;border:1px solid #4ade8040;color:#4ade80;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
+  table{width:100%;background:#111118;border:1px solid #ffffff10;border-radius:12px;overflow:hidden;border-collapse:collapse}
+  th{background:#0d0d14;text-align:left;padding:12px;font-size:11px;color:#666;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid #ffffff10;position:sticky;top:0}
+  td{padding:12px;border-bottom:1px solid #ffffff08;font-size:13px;color:#ccc;vertical-align:top}
+  tr:hover td{background:#ffffff04}
+  .status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  .st-primair{background:#4ade8020;color:#4ade80}
+  .st-alternatief{background:#60a5fa20;color:#60a5fa}
+  .st-eigen{background:#f59e0b20;color:#f59e0b}
+  .st-open{background:#64748b20;color:#94a3b8}
+  .muted{color:#555;font-size:11px}
+  .empty{text-align:center;padding:60px;color:#555}
+  .page-nav{display:flex;gap:8px;justify-content:center;padding:16px}
+  .page-nav button{background:#111118;border:1px solid #ffffff15;color:#aaa;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+  .page-nav button:disabled{opacity:0.3}
+  .tab-row{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid #ffffff10}
+  .tab-row button{background:none;border:none;color:#666;padding:10px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent}
+  .tab-row button.active{color:#fff;border-bottom-color:#6366f1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="config.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+        onerror="(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';document.head.appendChild(s);})()"></script>
+<script>
+const CFG = window.APP_CONFIG || {};
+let sb = null;
+async function initSb() {
+  const deadline = Date.now() + 5000;
+  while (!window.supabase && Date.now() < deadline) await new Promise(r => setTimeout(r, 100));
+  if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase) {
+    sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+  }
+}
+
+const state = {
+  user: null,
+  tab: 'responses',
+  responses: [],
+  participants: [],
+  participantCounts: {}, // participant_id -> totaal aantal responses (exact)
+  loading: false,
+  error: null,
+  filters: { niveau:'', status:'', search:'', participant:'', from:'', to:'' },
+  participantFilter: 'all', // 'all' | 'done' | 'active'
+  page: 0,
+  pageSize: 50,
+  total: 0,
+};
+
+// Totaal aantal woorden over alle niveaus (referentie uit index.html: 4.509)
+const TOTAL_WORDS = 4509;
+
+const h = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+async function init() {
+  if (!sb) { renderConfigError(); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  state.user = session?.user || null;
+  sb.auth.onAuthStateChange((_e, s) => { state.user = s?.user||null; render(); });
+  render();
+  if (state.user) loadAll();
+}
+
+function renderConfigError() {
+  document.getElementById('app').innerHTML = `
+    <div class="login-card">
+      <h2>Config ontbreekt</h2>
+      <p>SUPABASE_URL en SUPABASE_ANON_KEY zijn niet gezet in <code>config.js</code>. Zie README.</p>
+    </div>`;
+}
+
+function renderLogin(err) {
+  document.getElementById('app').innerHTML = `
+    <div class="login-card">
+      <h2>Admin login</h2>
+      <p>Log in met je admin-account om alle antwoorden te bekijken.</p>
+      <label>E-mail</label>
+      <input id="emailInput" type="email" placeholder="admin@voorbeeld.nl">
+      <label>Wachtwoord</label>
+      <input id="pwInput" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()">Inloggen</button>
+      ${err?`<div class="err">${h(err)}</div>`:''}
+    </div>`;
+  setTimeout(()=>document.getElementById('emailInput')?.focus(),50);
+}
+async function doLogin() {
+  const email = document.getElementById('emailInput')?.value?.trim();
+  const password = document.getElementById('pwInput')?.value;
+  if (!email || !password) { renderLogin('Vul e-mail en wachtwoord in'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { renderLogin(error.message); return; }
+  state.user = data.user;
+  render();
+  loadAll();
+}
+async function doLogout() {
+  await sb.auth.signOut();
+  state.user = null;
+  state.responses = []; state.participants = [];
+  render();
+}
+
+async function loadAll() {
+  await Promise.all([loadResponses(), loadParticipants()]);
+  render();
+}
+
+async function loadResponses() {
+  state.loading = true; render();
+  try {
+    let q = sb.from('responses').select('*', { count: 'exact' }).order('created_at',{ascending:false});
+    const f = state.filters;
+    if (f.niveau) q = q.eq('niveau', f.niveau);
+    if (f.status) q = q.eq('status', f.status);
+    if (f.participant) q = q.eq('participant_id', f.participant);
+    if (f.from) q = q.gte('created_at', f.from);
+    if (f.to) q = q.lte('created_at', f.to + 'T23:59:59');
+    if (f.search) q = q.or(`nederlands.ilike.%${f.search}%,waarde.ilike.%${f.search}%,primair.ilike.%${f.search}%`);
+    q = q.range(state.page*state.pageSize, (state.page+1)*state.pageSize - 1);
+    const { data, error, count } = await q;
+    if (error) throw error;
+    state.responses = data || [];
+    state.total = count || 0;
+    state.error = null;
+  } catch(err) {
+    state.error = err.message;
+    state.responses = [];
+  }
+  state.loading = false;
+}
+async function loadParticipants() {
+  try {
+    const { data, error } = await sb.from('participants').select('*').order('started_at',{ascending:false});
+    if (error) throw error;
+    state.participants = data || [];
+    // Haal exacte response-tellingen per deelnemer op (voor voortgangs-kolom)
+    await loadParticipantCounts();
+  } catch(err) { console.warn(err); }
+}
+
+async function loadParticipantCounts() {
+  state.participantCounts = {};
+  if (state.participants.length === 0) return;
+  // Eén RPC-achtige lookup via view-imitatie: haal alle (participant_id) met count.
+  // We doen dit in één trip door een geaggregeerde select; supabase-js ondersteunt count aggregaat niet native,
+  // dus we gebruiken een count-per-participant-id query via .select().
+  // Voor een onderzoek met beperkte deelnemers is per-rij ophalen + tellen prima.
+  const { data, error } = await sb.from('responses').select('participant_id');
+  if (error) { console.warn('counts fail', error); return; }
+  (data || []).forEach(r => {
+    state.participantCounts[r.participant_id] = (state.participantCounts[r.participant_id] || 0) + 1;
+  });
+}
+
+function setFilter(k, v) {
+  state.filters[k] = v;
+  state.page = 0;
+  loadResponses().then(render);
+}
+function resetFilters() {
+  state.filters = { niveau:'', status:'', search:'', participant:'', from:'', to:'' };
+  state.page = 0;
+  loadResponses().then(render);
+}
+function changePage(d) {
+  const maxPage = Math.max(0, Math.ceil(state.total/state.pageSize)-1);
+  state.page = Math.max(0, Math.min(maxPage, state.page + d));
+  loadResponses().then(render);
+}
+function switchTab(t) { state.tab = t; render(); if (t==='participants') loadParticipants().then(render); }
+
+function exportCsv() {
+  const rows = [['Tijd','Deelnemer','E-mail','Niveau','Thema','Nederlands','Primair','Status','Waarde','Session']];
+  const pMap = {};
+  state.participants.forEach(p => { pMap[p.id] = p; });
+  state.responses.forEach(r => {
+    const p = pMap[r.participant_id] || {};
+    rows.push([
+      r.created_at,
+      p.name || '',
+      p.email || '',
+      r.niveau,
+      r.thema,
+      r.nederlands,
+      r.primair,
+      r.status,
+      r.waarde || '',
+      r.session_id,
+    ]);
+  });
+  const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const csv = rows.map(row => row.map(esc).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'berbers_export_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function renderStats() {
+  const total = state.total;
+  const byStatus = {};
+  state.responses.forEach(r => { byStatus[r.status] = (byStatus[r.status]||0)+1; });
+  const doneCount = state.participants.filter(p=>p.completed_at).length;
+  return `
+    <div class="stats">
+      <div class="stat"><div class="v">${state.participants.length}</div><div class="l">Deelnemers</div></div>
+      <div class="stat"><div class="v" style="color:#4ade80">${doneCount}</div><div class="l">Voltooid</div></div>
+      <div class="stat"><div class="v">${total}</div><div class="l">Antwoorden (totaal)</div></div>
+      <div class="stat"><div class="v" style="color:#4ade80">${byStatus.primair||0}</div><div class="l">Primair (pagina)</div></div>
+      <div class="stat"><div class="v" style="color:#60a5fa">${byStatus.alternatief||0}</div><div class="l">Alternatief (pagina)</div></div>
+      <div class="stat"><div class="v" style="color:#f59e0b">${byStatus.eigen||0}</div><div class="l">Eigen (pagina)</div></div>
+    </div>`;
+}
+
+function renderFilters() {
+  const niveaus = [...new Set(state.responses.map(r=>r.niveau))].sort();
+  const allNiveaus = ['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5','Niveau 6','Niveau 7'];
+  const participantOpts = state.participants.map(p =>
+    `<option value="${h(p.id)}" ${state.filters.participant===p.id?'selected':''}>${h(p.name||'?')}${p.email?' ('+h(p.email)+')':''}</option>`
+  ).join('');
+  return `
+    <div class="filters">
+      <input class="grow" placeholder="🔍 zoek in woord/vertaling..." value="${h(state.filters.search)}" oninput="setFilter('search',this.value)">
+      <select onchange="setFilter('niveau',this.value)">
+        <option value="">Alle niveaus</option>
+        ${allNiveaus.map(n=>`<option value="${h(n)}" ${state.filters.niveau===n?'selected':''}>${h(n)}</option>`).join('')}
+      </select>
+      <select onchange="setFilter('status',this.value)">
+        <option value="">Alle statussen</option>
+        <option value="primair" ${state.filters.status==='primair'?'selected':''}>Primair</option>
+        <option value="alternatief" ${state.filters.status==='alternatief'?'selected':''}>Alternatief</option>
+        <option value="eigen" ${state.filters.status==='eigen'?'selected':''}>Eigen</option>
+        <option value="open" ${state.filters.status==='open'?'selected':''}>Open</option>
+      </select>
+      <select onchange="setFilter('participant',this.value)">
+        <option value="">Alle deelnemers</option>
+        ${participantOpts}
+      </select>
+      <input type="date" value="${h(state.filters.from)}" onchange="setFilter('from',this.value)" title="Van datum">
+      <input type="date" value="${h(state.filters.to)}" onchange="setFilter('to',this.value)" title="Tot datum">
+      <button class="export-btn" onclick="resetFilters()">✕ wissen</button>
+      <button class="export-btn" onclick="exportCsv()">⬇ CSV export</button>
+    </div>`;
+}
+
+function renderResponsesTable() {
+  if (state.loading) return `<div class="empty">Laden…</div>`;
+  if (state.error) return `<div class="empty" style="color:#ef4444">Fout: ${h(state.error)}</div>`;
+  if (state.responses.length===0) return `<div class="empty">Geen antwoorden gevonden met deze filters.</div>`;
+  const pMap = {}; state.participants.forEach(p => { pMap[p.id] = p; });
+  const rows = state.responses.map(r => {
+    const p = pMap[r.participant_id] || {};
+    const dt = new Date(r.created_at);
+    const tijd = dt.toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'});
+    return `
+      <tr>
+        <td class="muted">${h(tijd)}</td>
+        <td>${h(p.name||'—')}<div class="muted">${h(p.email||'')}</div></td>
+        <td>${h(r.niveau)}<div class="muted">${h(r.thema)}</div></td>
+        <td><b>${h(r.nederlands)}</b><div class="muted">primair: ${h(r.primair)}</div></td>
+        <td><span class="status-pill st-${h(r.status)}">${h(r.status)}</span></td>
+        <td>${h(r.waarde||'—')}</td>
+      </tr>`;
+  }).join('');
+  const maxPage = Math.max(0, Math.ceil(state.total/state.pageSize)-1);
+  return `
+    <table>
+      <thead><tr><th>Tijd</th><th>Deelnemer</th><th>Niveau</th><th>Woord</th><th>Status</th><th>Antwoord</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="page-nav">
+      <button onclick="changePage(-1)" ${state.page===0?'disabled':''}>‹ Vorige</button>
+      <span style="padding:6px 10px;color:#666;font-size:12px">Pagina ${state.page+1} / ${maxPage+1} · ${state.total} totaal</span>
+      <button onclick="changePage(1)" ${state.page>=maxPage?'disabled':''}>Volgende ›</button>
+    </div>`;
+}
+
+function setParticipantFilter(v) { state.participantFilter = v; render(); }
+
+function renderParticipantsTable() {
+  if (state.participants.length===0) return `<div class="empty">Nog geen deelnemers.</div>`;
+  const f = state.participantFilter;
+  const filtered = state.participants.filter(p =>
+    f==='all' ? true : f==='done' ? !!p.completed_at : !p.completed_at
+  );
+  const pf = (v,label) => `<button class="export-btn" style="${state.participantFilter===v?'background:#6366f120;color:#6366f1;border-color:#6366f150':''}" onclick="setParticipantFilter('${v}')">${label}</button>`;
+  const rows = filtered.map(p => {
+    const total = state.participantCounts[p.id] || 0;
+    const pct = Math.min(100, Math.round((total / TOTAL_WORDS) * 100));
+    const done = !!p.completed_at;
+    const doneAt = done ? new Date(p.completed_at).toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'}) : '';
+    const statusPill = done
+      ? `<span class="status-pill st-primair">✓ klaar</span><div class="muted">${h(doneAt)}</div>`
+      : `<span class="status-pill st-open">● bezig</span>`;
+    return `
+    <tr>
+      <td>${h(p.name||'—')}</td>
+      <td>${h(p.email||'—')}</td>
+      <td class="muted">${h(new Date(p.started_at).toLocaleString('nl-NL'))}</td>
+      <td>${statusPill}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;max-width:120px;background:#ffffff10;border-radius:4px;height:6px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${done?'#4ade80':'#6366f1'}"></div>
+          </div>
+          <span style="min-width:60px;font-size:12px">${total} <span class="muted">(${pct}%)</span></span>
+        </div>
+      </td>
+      <td><button class="export-btn" onclick="setFilter('participant','${h(p.id)}');switchTab('responses')">Bekijk →</button></td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="filters" style="margin-bottom:12px">
+      <label>Status:</label>
+      ${pf('all','Alle ('+state.participants.length+')')}
+      ${pf('done','Klaar ('+state.participants.filter(p=>p.completed_at).length+')')}
+      ${pf('active','Nog bezig ('+state.participants.filter(p=>!p.completed_at).length+')')}
+    </div>
+    <table>
+      <thead><tr><th>Naam</th><th>E-mail</th><th>Gestart</th><th>Status</th><th>Voortgang</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function render() {
+  if (!sb) { renderConfigError(); return; }
+  if (!state.user) { renderLogin(); return; }
+  const tab = state.tab;
+  document.getElementById('app').innerHTML = `
+    <div class="topbar">
+      <div>
+        <div class="sub">Berbers Review</div>
+        <h1>Admin dashboard</h1>
+      </div>
+      <div>
+        <span style="color:#666;font-size:12px;margin-right:12px">${h(state.user.email||'')}</span>
+        <button onclick="loadAll().then(render)">↻ vernieuwen</button>
+        <button onclick="doLogout()">Uitloggen</button>
+      </div>
+    </div>
+    <div class="container">
+      ${renderStats()}
+      <div class="tab-row">
+        <button class="${tab==='responses'?'active':''}" onclick="switchTab('responses')">Antwoorden</button>
+        <button class="${tab==='participants'?'active':''}" onclick="switchTab('participants')">Deelnemers</button>
+      </div>
+      ${tab==='responses' ? renderFilters() + renderResponsesTable() : renderParticipantsTable()}
+    </div>`;
+}
+
+initSb().then(init);
+</script>
+</body>
+</html>
