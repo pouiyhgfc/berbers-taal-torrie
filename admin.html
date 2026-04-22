@@ -7,11 +7,27 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0a0f;color:#eee;min-height:100vh}
-  .topbar{background:#111118;border-bottom:1px solid #ffffff10;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-  .topbar h1{font-size:18px;font-weight:600}
-  .topbar .sub{font-size:11px;color:#666;letter-spacing:2px;text-transform:uppercase}
-  .topbar button{background:#ffffff08;border:1px solid #ffffff18;color:#aaa;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer}
-  .topbar button:hover{background:#ffffff12}
+  a{color:#8b9cf8}
+  button{font-family:inherit}
+
+  /* Topbar */
+  .topbar{background:#111118;border-bottom:1px solid #ffffff10;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:10}
+  .topbar .title h1{font-size:18px;font-weight:600}
+  .topbar .title .sub{font-size:11px;color:#666;letter-spacing:2px;text-transform:uppercase}
+  .topbar .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .topbar .who{color:#666;font-size:12px;margin-right:6px}
+  .btn{background:#ffffff08;border:1px solid #ffffff18;color:#ccc;padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:#ffffff12;color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:#6366f1;border-color:#6366f1;color:#fff}
+  .btn-primary:hover{background:#7c7ff6}
+  .btn-ghost{background:transparent;border:1px solid #ffffff18}
+  .btn-danger{background:#ef444414;border-color:#ef444440;color:#fca5a5}
+  .btn-danger:hover{background:#ef444425;color:#fff}
+  .btn-success{background:#4ade8014;border-color:#4ade8040;color:#86efac}
+  .btn-success:hover{background:#4ade8025;color:#fff}
+
+  /* Layout */
   .container{padding:20px 22px;max-width:1400px;margin:0 auto}
   .login-card{max-width:380px;margin:80px auto;background:#111118;border:1px solid #ffffff12;border-radius:16px;padding:30px}
   .login-card h2{margin-bottom:6px;font-size:22px}
@@ -20,38 +36,90 @@
   .login-card input{width:100%;background:#0a0a0f;border:1px solid #ffffff18;border-radius:10px;padding:12px;color:#fff;font-size:14px;outline:none}
   .login-card input:focus{border-color:#6366f1}
   .login-card button{width:100%;background:#6366f1;border:none;border-radius:10px;padding:13px;color:#fff;font-weight:600;margin-top:16px;cursor:pointer}
-  .login-card button:disabled{opacity:0.5}
   .login-card .err{color:#ef4444;font-size:12px;margin-top:10px}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
   .stat{background:#111118;border:1px solid #ffffff10;border-radius:12px;padding:16px}
   .stat .v{font-size:26px;font-weight:700;line-height:1}
   .stat .l{font-size:10px;color:#666;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px}
-  .filters{background:#111118;border:1px solid #ffffff10;border-radius:12px;padding:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-  .filters select,.filters input{background:#0a0a0f;border:1px solid #ffffff18;color:#ddd;border-radius:8px;padding:7px 10px;font-size:13px;outline:none}
-  .filters label{font-size:11px;color:#666;letter-spacing:1px;text-transform:uppercase}
-  .filters .grow{flex:1;min-width:160px}
-  .export-btn{background:#4ade8018;border:1px solid #4ade8040;color:#4ade80;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
-  table{width:100%;background:#111118;border:1px solid #ffffff10;border-radius:12px;overflow:hidden;border-collapse:collapse}
-  th{background:#0d0d14;text-align:left;padding:12px;font-size:11px;color:#666;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid #ffffff10;position:sticky;top:0}
-  td{padding:12px;border-bottom:1px solid #ffffff08;font-size:13px;color:#ccc;vertical-align:top}
-  tr:hover td{background:#ffffff04}
-  .status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+
+  /* Tabs */
+  .tab-row{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid #ffffff10}
+  .tab-row .tab{background:none;border:none;color:#666;padding:10px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;font-weight:500}
+  .tab-row .tab:hover{color:#ccc}
+  .tab-row .tab.active{color:#fff;border-bottom-color:#6366f1}
+
+  /* Search bar - prominent */
+  .search-bar{display:flex;gap:8px;margin-bottom:12px;align-items:stretch}
+  .search-input-wrap{position:relative;flex:1;min-width:200px}
+  .search-input{width:100%;background:#111118;border:1px solid #ffffff15;color:#fff;border-radius:10px;padding:11px 40px 11px 40px;font-size:14px;outline:none}
+  .search-input:focus{border-color:#6366f180}
+  .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#666;pointer-events:none;font-size:14px}
+  .search-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#666;cursor:pointer;font-size:18px;padding:6px 10px;line-height:1}
+  .search-clear:hover{color:#fff}
+  .search-spinner{position:absolute;right:36px;top:50%;transform:translateY(-50%);color:#6366f1;font-size:11px;pointer-events:none}
+
+  /* Secondary filters */
+  .filter-strip{background:#0d0d14;border:1px solid #ffffff0a;border-radius:10px;padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .filter-strip .lbl{font-size:11px;color:#555;letter-spacing:1px;text-transform:uppercase;margin-right:4px}
+  .filter-strip select,.filter-strip input{background:#0a0a0f;border:1px solid #ffffff15;color:#ddd;border-radius:7px;padding:6px 10px;font-size:12px;outline:none}
+  .filter-strip select:focus,.filter-strip input:focus{border-color:#6366f160}
+  .filter-strip .sep{flex:1}
+
+  /* Pill filters (participants tab) */
+  .pill-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .pill{background:#111118;border:1px solid #ffffff15;color:#aaa;padding:7px 14px;border-radius:20px;font-size:12px;cursor:pointer}
+  .pill:hover{border-color:#ffffff30}
+  .pill.active{background:#6366f120;color:#6366f1;border-color:#6366f150}
+
+  /* Table */
+  .table-card{background:#111118;border:1px solid #ffffff10;border-radius:12px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th{background:#0d0d14;text-align:left;padding:11px 14px;font-size:11px;color:#777;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid #ffffff10;font-weight:600}
+  td{padding:12px 14px;border-bottom:1px solid #ffffff06;font-size:13px;color:#ccc;vertical-align:top}
+  tr:hover td{background:#ffffff03}
+  tr:last-child td{border-bottom:none}
+  td .title{color:#fff;font-weight:500}
+  .status-pill{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600}
   .st-primair{background:#4ade8020;color:#4ade80}
   .st-alternatief{background:#60a5fa20;color:#60a5fa}
   .st-eigen{background:#f59e0b20;color:#f59e0b}
   .st-open{background:#64748b20;color:#94a3b8}
+  .edit-pill{display:inline-block;font-size:10px;background:#f59e0b18;color:#f59e0b;padding:1px 7px;border-radius:8px;margin-left:4px}
   .muted{color:#555;font-size:11px}
   .empty{text-align:center;padding:60px;color:#555}
-  .page-nav{display:flex;gap:8px;justify-content:center;padding:16px}
-  .page-nav button{background:#111118;border:1px solid #ffffff15;color:#aaa;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
-  .page-nav button:disabled{opacity:0.3}
-  .tab-row{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid #ffffff10}
-  .tab-row button{background:none;border:none;color:#666;padding:10px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent}
-  .tab-row button.active{color:#fff;border-bottom-color:#6366f1}
+  .action-col{white-space:nowrap;text-align:right}
+  .icon-btn{background:transparent;border:none;color:#666;cursor:pointer;padding:6px 8px;border-radius:6px;font-size:16px;line-height:1}
+  .icon-btn:hover{background:#ffffff08;color:#fff}
+  .icon-btn.danger:hover{color:#ef4444;background:#ef444414}
+
+  /* Progress bar (participants) */
+  .progress-cell{display:flex;align-items:center;gap:10px;min-width:160px}
+  .progress-track{flex:1;background:#ffffff0a;border-radius:4px;height:6px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:4px;transition:width .3s}
+
+  /* Pagination */
+  .page-nav{display:flex;gap:8px;justify-content:center;padding:14px 0;align-items:center}
+  .page-info{padding:6px 12px;color:#666;font-size:12px}
+
+  /* Confirmation modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100}
+  .modal-card{background:#111118;border:1px solid #ffffff15;border-radius:14px;padding:24px;max-width:420px;width:90%}
+  .modal-card h3{font-size:18px;margin-bottom:8px;color:#fff}
+  .modal-card p{color:#aaa;font-size:13px;line-height:1.5;margin-bottom:16px}
+  .modal-card .warn{background:#ef444410;border:1px solid #ef444430;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:#fca5a5}
+  .modal-card .actions{display:flex;gap:8px;justify-content:flex-end}
+
+  /* Mini toast */
+  .toast{position:fixed;top:18px;right:22px;background:#111118;border:1px solid #4ade8050;color:#4ade80;padding:10px 18px;border-radius:10px;font-size:13px;z-index:200;box-shadow:0 8px 28px #0008}
+  .toast.err{border-color:#ef444455;color:#ef4444}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
 
 <script src="config.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
@@ -72,21 +140,30 @@ const state = {
   tab: 'responses',
   responses: [],
   participants: [],
-  participantCounts: {}, // participant_id -> totaal aantal responses (exact)
+  participantCounts: {},
   loading: false,
+  searching: false,
   error: null,
   filters: { niveau:'', status:'', search:'', participant:'', from:'', to:'' },
-  participantFilter: 'all', // 'all' | 'done' | 'active'
+  participantFilter: 'all',
   page: 0,
   pageSize: 50,
   total: 0,
 };
 
-// Totaal aantal woorden over alle niveaus (referentie uit index.html: 4.509)
 const TOTAL_WORDS = 4509;
-
 const h = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, kind) {
+  clearTimeout(toastTimer);
+  const root = document.getElementById('toastRoot');
+  root.innerHTML = `<div class="toast ${kind==='err'?'err':''}">${h(msg)}</div>`;
+  toastTimer = setTimeout(()=>{ root.innerHTML=''; }, 2200);
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────
 async function init() {
   if (!sb) { renderConfigError(); return; }
   const { data: { session } } = await sb.auth.getSession();
@@ -135,13 +212,22 @@ async function doLogout() {
   render();
 }
 
+// ── Data loading ───────────────────────────────────────────────────────────
 async function loadAll() {
   await Promise.all([loadResponses(), loadParticipants()]);
   render();
 }
 
+function sanitizeSearch(term) {
+  // In Supabase .or() is de komma een scheidingsteken tussen condities en
+  // % een wildcard binnen ilike. Beide neutraliseren we voor veilige searches.
+  return String(term||'').replace(/,/g,' ').replace(/%/g,' ').trim();
+}
+
 async function loadResponses() {
-  state.loading = true; render();
+  state.loading = true;
+  state.searching = !!state.filters.search;
+  render();
   try {
     let q = sb.from('responses').select('*', { count: 'exact' }).order('created_at',{ascending:false});
     const f = state.filters;
@@ -150,7 +236,10 @@ async function loadResponses() {
     if (f.participant) q = q.eq('participant_id', f.participant);
     if (f.from) q = q.gte('created_at', f.from);
     if (f.to) q = q.lte('created_at', f.to + 'T23:59:59');
-    if (f.search) q = q.or(`nederlands.ilike.%${f.search}%,waarde.ilike.%${f.search}%,primair.ilike.%${f.search}%`);
+    const safe = sanitizeSearch(f.search);
+    if (safe) {
+      q = q.or(`nederlands.ilike.%${safe}%,waarde.ilike.%${safe}%,primair.ilike.%${safe}%,thema.ilike.%${safe}%`);
+    }
     q = q.range(state.page*state.pageSize, (state.page+1)*state.pageSize - 1);
     const { data, error, count } = await q;
     if (error) throw error;
@@ -158,17 +247,19 @@ async function loadResponses() {
     state.total = count || 0;
     state.error = null;
   } catch(err) {
-    state.error = err.message;
+    console.error('loadResponses', err);
+    state.error = err.message || String(err);
     state.responses = [];
   }
   state.loading = false;
+  state.searching = false;
 }
+
 async function loadParticipants() {
   try {
     const { data, error } = await sb.from('participants').select('*').order('started_at',{ascending:false});
     if (error) throw error;
     state.participants = data || [];
-    // Haal exacte response-tellingen per deelnemer op (voor voortgangs-kolom)
     await loadParticipantCounts();
   } catch(err) { console.warn(err); }
 }
@@ -176,10 +267,6 @@ async function loadParticipants() {
 async function loadParticipantCounts() {
   state.participantCounts = {};
   if (state.participants.length === 0) return;
-  // Eén RPC-achtige lookup via view-imitatie: haal alle (participant_id) met count.
-  // We doen dit in één trip door een geaggregeerde select; supabase-js ondersteunt count aggregaat niet native,
-  // dus we gebruiken een count-per-participant-id query via .select().
-  // Voor een onderzoek met beperkte deelnemers is per-rij ophalen + tellen prima.
   const { data, error } = await sb.from('responses').select('participant_id');
   if (error) { console.warn('counts fail', error); return; }
   (data || []).forEach(r => {
@@ -187,6 +274,20 @@ async function loadParticipantCounts() {
   });
 }
 
+// ── Filters / navigation ───────────────────────────────────────────────────
+let searchDebounce = null;
+function setSearchDebounced(v) {
+  state.filters.search = v;
+  state.page = 0;
+  state.searching = true;
+  updateSearchSpinner();
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(()=>{ loadResponses().then(render); }, 350);
+}
+function updateSearchSpinner() {
+  const s = document.getElementById('searchSpinner');
+  if (s) s.style.display = state.searching ? 'inline' : 'none';
+}
 function setFilter(k, v) {
   state.filters[k] = v;
   state.page = 0;
@@ -203,86 +304,167 @@ function changePage(d) {
   loadResponses().then(render);
 }
 function switchTab(t) { state.tab = t; render(); if (t==='participants') loadParticipants().then(render); }
+function setParticipantFilter(v) { state.participantFilter = v; render(); }
 
+// ── CSV export: Niveau | Woord | Antwoord ──────────────────────────────────
 function exportCsv() {
-  const rows = [['Tijd','Deelnemer','E-mail','Niveau','Thema','Nederlands','Primair','Status','Waarde','Session']];
-  const pMap = {};
-  state.participants.forEach(p => { pMap[p.id] = p; });
+  if (state.responses.length === 0) { toast('Geen rijen om te exporteren','err'); return; }
+  const rows = [['Niveau','Woord','Antwoord']];
+  // Alleen beantwoord (niet 'open') en alleen meest recente antwoord per
+  // (participant, woord, niveau) — anders zie je intrekkingen dubbel.
+  const latest = {};
+  // Supabase levert al DESC op created_at, dus eerste hit = laatste antwoord.
   state.responses.forEach(r => {
-    const p = pMap[r.participant_id] || {};
-    rows.push([
-      r.created_at,
-      p.name || '',
-      p.email || '',
-      r.niveau,
-      r.thema,
-      r.nederlands,
-      r.primair,
-      r.status,
-      r.waarde || '',
-      r.session_id,
-    ]);
+    const key = `${r.participant_id}|${r.niveau}|${r.word_idx}`;
+    if (!latest[key]) latest[key] = r;
   });
-  const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  Object.values(latest).forEach(r => {
+    if (r.status === 'open') return;
+    rows.push([r.niveau, r.nederlands, r.waarde || r.primair || '']);
+  });
+  const esc = v => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
   const csv = rows.map(row => row.map(esc).join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'berbers_export_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
+  toast(`CSV geëxporteerd (${rows.length-1} regels)`);
 }
 
+// ── Delete flows ───────────────────────────────────────────────────────────
+function openConfirm({ title, body, warn, confirmLabel='Verwijderen', onConfirm }) {
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeConfirm()">
+      <div class="modal-card">
+        <h3>${h(title)}</h3>
+        <p>${body || ''}</p>
+        ${warn ? `<div class="warn">${warn}</div>` : ''}
+        <div class="actions">
+          <button class="btn btn-ghost" onclick="closeConfirm()">Annuleren</button>
+          <button id="confirmBtn" class="btn btn-danger">${h(confirmLabel)}</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('confirmBtn').onclick = async () => {
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true; btn.textContent = 'Bezig...';
+    try { await onConfirm(); closeConfirm(); }
+    catch(e) { btn.disabled = false; btn.textContent = confirmLabel; toast(e.message||'Verwijderen mislukt','err'); }
+  };
+}
+function closeConfirm() { document.getElementById('modalRoot').innerHTML=''; }
+
+async function deleteResponse(id) {
+  openConfirm({
+    title: 'Antwoord verwijderen?',
+    body: 'Deze actie kan niet ongedaan gemaakt worden. De rij wordt definitief uit de database verwijderd.',
+    onConfirm: async () => {
+      const { error } = await sb.from('responses').delete().eq('id', id);
+      if (error) throw error;
+      toast('Antwoord verwijderd');
+      await loadResponses();
+      render();
+    }
+  });
+}
+
+async function deleteParticipant(id, name) {
+  const cnt = state.participantCounts[id] || 0;
+  openConfirm({
+    title: `Deelnemer "${name||'onbekend'}" verwijderen?`,
+    body: `De deelnemer en al zijn/haar antwoorden worden definitief verwijderd. Deze actie kan niet ongedaan gemaakt worden.`,
+    warn: cnt > 0 ? `⚠ ${cnt} antwoord${cnt===1?'':'en'} word${cnt===1?'t':'en'} mee verwijderd (cascade).` : null,
+    confirmLabel: 'Verwijder alles',
+    onConfirm: async () => {
+      const { error } = await sb.from('participants').delete().eq('id', id);
+      if (error) throw error;
+      toast('Deelnemer verwijderd');
+      await loadAll();
+    }
+  });
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
 function renderStats() {
-  const total = state.total;
-  const byStatus = {};
-  state.responses.forEach(r => { byStatus[r.status] = (byStatus[r.status]||0)+1; });
   const doneCount = state.participants.filter(p=>p.completed_at).length;
+  const activeCount = state.participants.length - doneCount;
   return `
     <div class="stats">
       <div class="stat"><div class="v">${state.participants.length}</div><div class="l">Deelnemers</div></div>
       <div class="stat"><div class="v" style="color:#4ade80">${doneCount}</div><div class="l">Voltooid</div></div>
-      <div class="stat"><div class="v">${total}</div><div class="l">Antwoorden (totaal)</div></div>
-      <div class="stat"><div class="v" style="color:#4ade80">${byStatus.primair||0}</div><div class="l">Primair (pagina)</div></div>
-      <div class="stat"><div class="v" style="color:#60a5fa">${byStatus.alternatief||0}</div><div class="l">Alternatief (pagina)</div></div>
-      <div class="stat"><div class="v" style="color:#f59e0b">${byStatus.eigen||0}</div><div class="l">Eigen (pagina)</div></div>
+      <div class="stat"><div class="v" style="color:#6366f1">${activeCount}</div><div class="l">Nog bezig</div></div>
+      <div class="stat"><div class="v">${state.total.toLocaleString('nl-NL')}</div><div class="l">Antwoorden totaal</div></div>
     </div>`;
 }
 
-function renderFilters() {
-  const niveaus = [...new Set(state.responses.map(r=>r.niveau))].sort();
+// ── Responses tab ──────────────────────────────────────────────────────────
+function renderResponsesTab() {
+  return renderSearchBar() + renderFilterStrip() + renderActionRow() + renderResponsesTable();
+}
+
+function renderSearchBar() {
+  const v = state.filters.search || '';
+  return `
+    <div class="search-bar">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input id="searchInput" class="search-input" type="text" placeholder="Zoek in Nederlands, eigen vertaling, primair of thema..." value="${h(v)}" oninput="setSearchDebounced(this.value)">
+        <span id="searchSpinner" class="search-spinner" style="display:${state.searching?'inline':'none'}">laden...</span>
+        ${v ? `<button class="search-clear" title="Zoekterm wissen" onclick="document.getElementById('searchInput').value='';setSearchDebounced('')">×</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderFilterStrip() {
+  const f = state.filters;
   const allNiveaus = ['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5','Niveau 6','Niveau 7'];
   const participantOpts = state.participants.map(p =>
-    `<option value="${h(p.id)}" ${state.filters.participant===p.id?'selected':''}>${h(p.name||'?')}${p.email?' ('+h(p.email)+')':''}</option>`
+    `<option value="${h(p.id)}" ${f.participant===p.id?'selected':''}>${h(p.name||'?')}${p.email?' ('+h(p.email)+')':''}</option>`
   ).join('');
+  const hasAny = f.niveau||f.status||f.participant||f.from||f.to||f.search;
   return `
-    <div class="filters">
-      <input class="grow" placeholder="🔍 zoek in woord/vertaling..." value="${h(state.filters.search)}" oninput="setFilter('search',this.value)">
+    <div class="filter-strip">
+      <span class="lbl">Filter</span>
       <select onchange="setFilter('niveau',this.value)">
         <option value="">Alle niveaus</option>
-        ${allNiveaus.map(n=>`<option value="${h(n)}" ${state.filters.niveau===n?'selected':''}>${h(n)}</option>`).join('')}
+        ${allNiveaus.map(n=>`<option value="${h(n)}" ${f.niveau===n?'selected':''}>${h(n)}</option>`).join('')}
       </select>
       <select onchange="setFilter('status',this.value)">
         <option value="">Alle statussen</option>
-        <option value="primair" ${state.filters.status==='primair'?'selected':''}>Primair</option>
-        <option value="alternatief" ${state.filters.status==='alternatief'?'selected':''}>Alternatief</option>
-        <option value="eigen" ${state.filters.status==='eigen'?'selected':''}>Eigen</option>
-        <option value="open" ${state.filters.status==='open'?'selected':''}>Open</option>
+        <option value="primair" ${f.status==='primair'?'selected':''}>Primair</option>
+        <option value="alternatief" ${f.status==='alternatief'?'selected':''}>Alternatief</option>
+        <option value="eigen" ${f.status==='eigen'?'selected':''}>Eigen</option>
+        <option value="open" ${f.status==='open'?'selected':''}>Open</option>
       </select>
       <select onchange="setFilter('participant',this.value)">
         <option value="">Alle deelnemers</option>
         ${participantOpts}
       </select>
-      <input type="date" value="${h(state.filters.from)}" onchange="setFilter('from',this.value)" title="Van datum">
-      <input type="date" value="${h(state.filters.to)}" onchange="setFilter('to',this.value)" title="Tot datum">
-      <button class="export-btn" onclick="resetFilters()">✕ wissen</button>
-      <button class="export-btn" onclick="exportCsv()">⬇ CSV export</button>
+      <input type="date" value="${h(f.from)}" onchange="setFilter('from',this.value)" title="Van datum">
+      <span style="color:#555;font-size:11px">tot</span>
+      <input type="date" value="${h(f.to)}" onchange="setFilter('to',this.value)" title="Tot datum">
+      <span class="sep"></span>
+      ${hasAny ? `<button class="btn btn-ghost" onclick="resetFilters()">✕ filters wissen</button>` : ''}
+    </div>`;
+}
+
+function renderActionRow() {
+  return `
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn" onclick="loadAll().then(render)">↻ Vernieuwen</button>
+      <button class="btn btn-success" onclick="exportCsv()">⬇ Exporteer CSV (Niveau · Woord · Antwoord)</button>
     </div>`;
 }
 
 function renderResponsesTable() {
-  if (state.loading) return `<div class="empty">Laden…</div>`;
-  if (state.error) return `<div class="empty" style="color:#ef4444">Fout: ${h(state.error)}</div>`;
-  if (state.responses.length===0) return `<div class="empty">Geen antwoorden gevonden met deze filters.</div>`;
+  if (state.loading) return `<div class="table-card"><div class="empty">Laden…</div></div>`;
+  if (state.error) return `<div class="table-card"><div class="empty" style="color:#ef4444">Fout bij laden: ${h(state.error)}</div></div>`;
+  if (state.responses.length===0) {
+    const hasFilters = state.filters.search || state.filters.niveau || state.filters.status || state.filters.participant || state.filters.from || state.filters.to;
+    return `<div class="table-card"><div class="empty">${hasFilters ? 'Geen antwoorden gevonden met deze filters. Pas filters aan of klik op "filters wissen".' : 'Nog geen antwoorden binnen.'}</div></div>`;
+  }
   const pMap = {}; state.participants.forEach(p => { pMap[p.id] = p; });
   const rows = state.responses.map(r => {
     const p = pMap[r.participant_id] || {};
@@ -290,36 +472,49 @@ function renderResponsesTable() {
     const tijd = dt.toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'});
     return `
       <tr>
-        <td class="muted">${h(tijd)}</td>
-        <td>${h(p.name||'—')}<div class="muted">${h(p.email||'')}</div></td>
-        <td>${h(r.niveau)}<div class="muted">${h(r.thema)}</div></td>
-        <td><b>${h(r.nederlands)}</b><div class="muted">primair: ${h(r.primair)}</div></td>
-        <td><span class="status-pill st-${h(r.status)}">${h(r.status)}</span></td>
-        <td>${h(r.waarde||'—')}</td>
+        <td class="muted" style="white-space:nowrap">${h(tijd)}</td>
+        <td><div class="title">${h(p.name||'—')}</div><div class="muted">${h(p.email||'')}</div></td>
+        <td>${h(r.niveau)}<div class="muted">${h(r.thema||'')}</div></td>
+        <td><div class="title">${h(r.nederlands)}</div><div class="muted">primair: ${h(r.primair||'—')}</div></td>
+        <td><span class="status-pill st-${h(r.status)}">${h(r.status)}</span>${r.is_edit?'<span class="edit-pill">bewerkt</span>':''}</td>
+        <td>${h(r.waarde || (r.status==='primair' ? r.primair : '—'))}</td>
+        <td class="action-col">
+          <button class="icon-btn danger" title="Antwoord verwijderen" onclick="deleteResponse('${h(r.id)}')">🗑</button>
+        </td>
       </tr>`;
   }).join('');
   const maxPage = Math.max(0, Math.ceil(state.total/state.pageSize)-1);
   return `
-    <table>
-      <thead><tr><th>Tijd</th><th>Deelnemer</th><th>Niveau</th><th>Woord</th><th>Status</th><th>Antwoord</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="page-nav">
-      <button onclick="changePage(-1)" ${state.page===0?'disabled':''}>‹ Vorige</button>
-      <span style="padding:6px 10px;color:#666;font-size:12px">Pagina ${state.page+1} / ${maxPage+1} · ${state.total} totaal</span>
-      <button onclick="changePage(1)" ${state.page>=maxPage?'disabled':''}>Volgende ›</button>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:130px">Tijd</th>
+            <th>Deelnemer</th>
+            <th>Niveau</th>
+            <th>Woord</th>
+            <th style="width:110px">Status</th>
+            <th>Antwoord</th>
+            <th style="width:50px"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="page-nav">
+        <button class="btn" onclick="changePage(-1)" ${state.page===0?'disabled':''}>‹ Vorige</button>
+        <span class="page-info">Pagina ${state.page+1} / ${maxPage+1} · ${state.total.toLocaleString('nl-NL')} totaal</span>
+        <button class="btn" onclick="changePage(1)" ${state.page>=maxPage?'disabled':''}>Volgende ›</button>
+      </div>
     </div>`;
 }
 
-function setParticipantFilter(v) { state.participantFilter = v; render(); }
-
-function renderParticipantsTable() {
-  if (state.participants.length===0) return `<div class="empty">Nog geen deelnemers.</div>`;
+// ── Participants tab ───────────────────────────────────────────────────────
+function renderParticipantsTab() {
+  if (state.participants.length===0) return `<div class="table-card"><div class="empty">Nog geen deelnemers.</div></div>`;
   const f = state.participantFilter;
   const filtered = state.participants.filter(p =>
     f==='all' ? true : f==='done' ? !!p.completed_at : !p.completed_at
   );
-  const pf = (v,label) => `<button class="export-btn" style="${state.participantFilter===v?'background:#6366f120;color:#6366f1;border-color:#6366f150':''}" onclick="setParticipantFilter('${v}')">${label}</button>`;
   const rows = filtered.map(p => {
     const total = state.participantCounts[p.id] || 0;
     const pct = Math.min(100, Math.round((total / TOTAL_WORDS) * 100));
@@ -328,60 +523,85 @@ function renderParticipantsTable() {
     const statusPill = done
       ? `<span class="status-pill st-primair">✓ klaar</span><div class="muted">${h(doneAt)}</div>`
       : `<span class="status-pill st-open">● bezig</span>`;
+    const nameSafeForJs = (p.name||'onbekend').replace(/'/g,"\\'");
     return `
     <tr>
-      <td>${h(p.name||'—')}</td>
+      <td><div class="title">${h(p.name||'—')}</div></td>
       <td>${h(p.email||'—')}</td>
-      <td class="muted">${h(new Date(p.started_at).toLocaleString('nl-NL'))}</td>
+      <td class="muted" style="white-space:nowrap">${h(new Date(p.started_at).toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'}))}</td>
       <td>${statusPill}</td>
       <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="flex:1;max-width:120px;background:#ffffff10;border-radius:4px;height:6px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${done?'#4ade80':'#6366f1'}"></div>
-          </div>
-          <span style="min-width:60px;font-size:12px">${total} <span class="muted">(${pct}%)</span></span>
+        <div class="progress-cell">
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${done?'#4ade80':'#6366f1'}"></div></div>
+          <span style="min-width:80px;font-size:12px">${total} <span class="muted">(${pct}%)</span></span>
         </div>
       </td>
-      <td><button class="export-btn" onclick="setFilter('participant','${h(p.id)}');switchTab('responses')">Bekijk →</button></td>
+      <td class="action-col">
+        <button class="btn btn-ghost" title="Bekijk antwoorden van deze deelnemer" onclick="setFilter('participant','${h(p.id)}');switchTab('responses')">Bekijk</button>
+        <button class="icon-btn danger" title="Deelnemer verwijderen (incl. al hun antwoorden)" onclick="deleteParticipant('${h(p.id)}','${h(nameSafeForJs)}')">🗑</button>
+      </td>
     </tr>`;
   }).join('');
+  const pf = (v,label,count) => `<button class="pill ${state.participantFilter===v?'active':''}" onclick="setParticipantFilter('${v}')">${h(label)} <span class="muted" style="margin-left:4px">${count}</span></button>`;
   return `
-    <div class="filters" style="margin-bottom:12px">
-      <label>Status:</label>
-      ${pf('all','Alle ('+state.participants.length+')')}
-      ${pf('done','Klaar ('+state.participants.filter(p=>p.completed_at).length+')')}
-      ${pf('active','Nog bezig ('+state.participants.filter(p=>!p.completed_at).length+')')}
+    <div class="pill-filter">
+      ${pf('all','Alle',state.participants.length)}
+      ${pf('done','Klaar',state.participants.filter(p=>p.completed_at).length)}
+      ${pf('active','Nog bezig',state.participants.filter(p=>!p.completed_at).length)}
     </div>
-    <table>
-      <thead><tr><th>Naam</th><th>E-mail</th><th>Gestart</th><th>Status</th><th>Voortgang</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>E-mail</th>
+            <th style="width:130px">Gestart</th>
+            <th style="width:160px">Status</th>
+            <th style="width:260px">Voortgang</th>
+            <th style="width:180px"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
+// ── Main render ────────────────────────────────────────────────────────────
 function render() {
   if (!sb) { renderConfigError(); return; }
   if (!state.user) { renderLogin(); return; }
   const tab = state.tab;
   document.getElementById('app').innerHTML = `
     <div class="topbar">
-      <div>
+      <div class="title">
         <div class="sub">Berbers Review</div>
         <h1>Admin dashboard</h1>
       </div>
-      <div>
-        <span style="color:#666;font-size:12px;margin-right:12px">${h(state.user.email||'')}</span>
-        <button onclick="loadAll().then(render)">↻ vernieuwen</button>
-        <button onclick="doLogout()">Uitloggen</button>
+      <div class="actions">
+        <span class="who">${h(state.user.email||'')}</span>
+        <button class="btn" onclick="loadAll().then(render)">↻ Vernieuwen</button>
+        <button class="btn btn-ghost" onclick="doLogout()">Uitloggen</button>
       </div>
     </div>
     <div class="container">
       ${renderStats()}
       <div class="tab-row">
-        <button class="${tab==='responses'?'active':''}" onclick="switchTab('responses')">Antwoorden</button>
-        <button class="${tab==='participants'?'active':''}" onclick="switchTab('participants')">Deelnemers</button>
+        <button class="tab ${tab==='responses'?'active':''}" onclick="switchTab('responses')">Antwoorden</button>
+        <button class="tab ${tab==='participants'?'active':''}" onclick="switchTab('participants')">Deelnemers</button>
       </div>
-      ${tab==='responses' ? renderFilters() + renderResponsesTable() : renderParticipantsTable()}
+      ${tab==='responses' ? renderResponsesTab() : renderParticipantsTab()}
     </div>`;
+  // cursor in zoekveld behouden na re-render
+  if (state.filters.search && tab==='responses') {
+    setTimeout(()=>{
+      const el = document.getElementById('searchInput');
+      if (el && document.activeElement !== el) {
+        // alleen focussen als de gebruiker niet in een ander veld staat te typen
+        const activeTag = document.activeElement?.tagName;
+        if (activeTag !== 'INPUT' && activeTag !== 'SELECT') el.focus();
+      }
+    }, 0);
+  }
 }
 
 initSb().then(init);

@@ -84,6 +84,17 @@ create policy "auth read responses"
   on public.responses for select to authenticated
   using (true);
 
+-- admin (authenticated) mag rijen verwijderen (voor opschonen van testdata etc.)
+drop policy if exists "auth delete participants" on public.participants;
+create policy "auth delete participants"
+  on public.participants for delete to authenticated
+  using (true);
+
+drop policy if exists "auth delete responses" on public.responses;
+create policy "auth delete responses"
+  on public.responses for delete to authenticated
+  using (true);
+
 -- ============================================================================
 -- RPC's voor inserts (SECURITY DEFINER = omzeilt RLS, anon mag EXECUTE).
 -- Zo kan anon schrijven zonder SELECT-permissies te hebben, en valideren we

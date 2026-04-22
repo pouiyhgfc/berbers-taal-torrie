@@ -90,6 +90,11 @@ input{font-family:Georgia,serif}
 .filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-ms-overflow-style:none;scrollbar-width:none}
 .filter-row::-webkit-scrollbar{display:none}
 .filter-btn{flex-shrink:0;border-radius:20px;padding:6px 12px;font-size:12px;border:1px solid;white-space:nowrap}
+.results-search-row{display:flex;gap:6px;margin:12px 0 10px;position:relative}
+.results-search{flex:1;background:#111118;border:1px solid #ffffff15;color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;outline:none;font-family:Georgia,serif}
+.results-search:focus{border-color:#6366f180}
+.results-search-clear{background:#111118;border:1px solid #ffffff15;color:#888;border-radius:10px;padding:0 14px;font-size:14px;cursor:pointer}
+.results-search-meta{font-size:11px;color:#666;padding:6px 2px 0}
 .results-list{padding:12px 16px 40px}
 .result-item{width:100%;background:#111118;border-radius:14px;padding:14px 16px;text-align:left;margin-bottom:8px;border:1px solid #ffffff08;display:flex;justify-content:space-between;align-items:flex-start;border-left:3px solid}
 .result-nl{font-size:16px;font-weight:600;color:#fff}
@@ -209,6 +214,7 @@ const state = {
   storageOk: null,
   editingWordIdx: null,
   filter: 'alle',
+  resultSearch: '',
   eigenMode: false,
   participant: null,       // {id, name, email, session_id}
   syncState: 'idle',       // 'idle' | 'pending' | 'ok' | 'fail'
@@ -536,15 +542,17 @@ function lsLoad() {
 }
 
 // ── CSV Export ─────────────────────────────────────────────────────────────
+// Drie kolommen: Niveau | Woord (NL) | Antwoord. Open (= nog geen keuze) wordt
+// niet meegenomen in de export.
 function doExport(niveau) {
   const words = DATA[niveau].w;
   const decs = state.allDecisions[niveau]?.decisions || {};
-  const esc = s => '"' + String(s).replace(/"/g,'""') + '"';
-  const rows = [['Nederlands','Berbers','Status','Origineel primair','Thema','Niveau'].map(esc).join(',')];
+  const esc = s => '"' + String(s==null?'':s).replace(/"/g,'""') + '"';
+  const rows = [['Niveau','Woord','Antwoord'].map(esc).join(',')];
   words.forEach((w,i) => {
     const d = decs[i];
     if (!d || d.status==='open') return;
-    rows.push([w.n, d.waarde||w.p, d.status, w.p, w.t, niveau].map(esc).join(','));
+    rows.push([niveau, w.n, d.waarde || w.p].map(esc).join(','));
   });
   const blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
@@ -559,7 +567,7 @@ function goHome() {
   state.screen='home'; state.eigenMode=false; render();
 }
 function goReview(niveau) { state.screen='review'; state.activeNiveau=niveau; state.eigenMode=false; render(); }
-function goResults(niveau) { state.screen='results'; state.activeNiveau=niveau; state.filter='alle'; render(); }
+function goResults(niveau) { state.screen='results'; state.activeNiveau=niveau; state.filter='alle'; state.resultSearch=''; render(); }
 
 // ── Onboarding ──────────────────────────────────────────────────────────────
 function renderOnboard() {
@@ -942,7 +950,17 @@ function renderResults() {
   const reviewed = words.map((w,i)=>({w,i,d:decisions[i]})).filter(x=>x.d);
   const counts = {};
   reviewed.forEach(x=>{ counts[x.d.status]=(counts[x.d.status]||0)+1; });
-  const filtered = state.filter==='alle' ? reviewed : reviewed.filter(x=>x.d.status===state.filter);
+  const byStatus = state.filter==='alle' ? reviewed : reviewed.filter(x=>x.d.status===state.filter);
+  const search = (state.resultSearch || '').trim().toLowerCase();
+  const filtered = search
+    ? byStatus.filter(x => {
+        const nl = (x.w.n || '').toLowerCase();
+        const pr = (x.w.p || '').toLowerCase();
+        const wa = (x.d.waarde || '').toLowerCase();
+        const th = (x.w.t || '').toLowerCase();
+        return nl.includes(search) || pr.includes(search) || wa.includes(search) || th.includes(search);
+      })
+    : byStatus;
 
   const filterBtns = [['alle',reviewed.length],['primair',counts.primair||0],['alternatief',counts.alternatief||0],['eigen',counts.eigen||0],['open',counts.open||0]].map(([f,n])=>{
     const active = state.filter===f;
@@ -950,14 +968,21 @@ function renderResults() {
     return `<button class="filter-btn" style="background:${active?fc+'20':'#111118'};color:${active?fc:'#666'};border-color:${active?fc:'#ffffff15'}" onclick="setFilter('${f}')">${f==='alle'?'Alle':f.charAt(0).toUpperCase()+f.slice(1)} (${n})</button>`;
   }).join('');
 
+  const emptyMsg = reviewed.length === 0
+    ? 'Nog geen woorden beoordeeld in dit niveau.'
+    : search
+      ? `Geen resultaten voor "${h(state.resultSearch)}"`
+      : 'Nog niets in deze categorie';
+
   const items = filtered.length===0
-    ? `<div class="empty-state">Nog niets in deze categorie</div>`
+    ? `<div class="empty-state">${emptyMsg}</div>`
     : filtered.map(({w,i,d})=>`
     <button class="result-item" style="border-left-color:${sc[d.status]||'#fff'}" onclick="openEdit(${i})">
       <div style="flex:1;min-width:0">
         <div class="result-nl">${h(w.n)}</div>
         <div class="result-berbers" style="color:${sc[d.status]}">${h(d.waarde||w.p)}</div>
         ${d.status!=='primair'?`<div class="result-orig">primair: ${h(w.p)}</div>`:''}
+        <div class="result-orig" style="color:#555;font-size:10px;margin-top:2px">${h(w.t||'')}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-left:10px;flex-shrink:0">
         <span class="result-status" style="color:${sc[d.status]}">${sl[d.status]}</span>
@@ -976,13 +1001,26 @@ function renderResults() {
         </div>
         <button class="btn-csv" style="background:${c}20;color:${c};border-color:${c}50" onclick="doExport('${h(niveau)}')">⬇ CSV</button>
       </div>
+      <div class="results-search-row">
+        <input id="resultSearch" class="results-search" placeholder="🔍 Zoek in Nederlands, thema of vertaling..." value="${h(state.resultSearch||'')}" oninput="setResultSearch(this.value)">
+        ${state.resultSearch?`<button class="results-search-clear" onclick="setResultSearch('')">✕</button>`:''}
+      </div>
       <div class="filter-row">${filterBtns}</div>
+      ${search && filtered.length>0 ? `<div class="results-search-meta">${filtered.length} resultaat${filtered.length===1?'':'en'} voor "${h(state.resultSearch)}"</div>`:''}
     </div>
     <div class="results-list">${items}</div>
   </div>`;
+  // focus behouden bij live-zoeken
+  if (search) {
+    setTimeout(()=>{
+      const el = document.getElementById('resultSearch');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    }, 0);
+  }
 }
 
 function setFilter(f) { state.filter=f; renderResults(); }
+function setResultSearch(v) { state.resultSearch = v; renderResults(); }
 
 // ── Edit Modal ─────────────────────────────────────────────────────────────
 function openEdit(wordIdx) {
@@ -1077,11 +1115,16 @@ function saveEdit(status, waarde) {
   const idx = state.editingWordIdx;
   const ns = state.allDecisions[niveau];
   const newDecisions = {...(ns?.decisions||{})};
-  if(status===null) delete newDecisions[idx];
-  else newDecisions[idx] = {status, waarde};
+  if (status === null) {
+    // "Terug in de lijst" — lokaal verwijderen, in DB markeren als 'open' met
+    // is_edit=true zodat de admin ziet dat de deelnemer z'n keuze introk.
+    delete newDecisions[idx];
+  } else {
+    newDecisions[idx] = {status, waarde};
+  }
   state.allDecisions[niveau] = {...ns, decisions: newDecisions};
   lsSave(niveau);
-  if (state.participant && status) {
+  if (state.participant) {
     const word = DATA[niveau].w[idx];
     pushResponse({
       participant_id: state.participant.id,
@@ -1091,8 +1134,8 @@ function saveEdit(status, waarde) {
       nederlands: word.n,
       primair: word.p,
       thema: word.t,
-      status,
-      waarde: waarde || null,
+      status: status || 'open',
+      waarde: status ? (waarde || null) : null,
       is_edit: true,
     }).then(persistQueue);
   }
