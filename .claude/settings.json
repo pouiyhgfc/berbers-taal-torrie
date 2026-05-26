@@ -7,7 +7,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "bash .claude/install-skills.sh"
+                        "command": "bash ~/.claude/install-skills.sh"
                     }
                 ]
             }
